@@ -61,48 +61,53 @@ Use Python 3.10 or newer. The project currently has no runtime dependencies.
 Run commands directly from the repository:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli validate examples/api_publish.af
-PYTHONPATH=compiler python3 -m archflow.cli build examples/api_publish.af --registry registry
-PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/api_publish.af --registry registry
-PYTHONPATH=compiler python3 -m archflow.cli prompt examples/api_publish.af --module Manager_Backend --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli validate examples/kanban.af
+PYTHONPATH=compiler python3 -m archflow.cli build examples/kanban.af --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/kanban.af --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli prompt examples/kanban.af --module Task_Backend --registry registry
 ```
 
 Or install it in editable mode:
 
 ```bash
 python3 -m pip install -e .
-archflow validate examples/api_publish.af
-archflow build examples/api_publish.af --registry registry
-archflow scaffold examples/api_publish.af --registry registry
-archflow prompt examples/api_publish.af --module Manager_Backend --registry registry
+archflow validate examples/kanban.af
+archflow build examples/kanban.af --registry registry
+archflow scaffold examples/kanban.af --registry registry
+archflow prompt examples/kanban.af --module Task_Backend --registry registry
 ```
 
 ## Example Input
 
 ```archflow
-.System: API_Publish_Platform
+# Task board architecture
+.System: TaskBoard
 .Standard: REST_JSON
-.Schema.HTTPS/Auth: Authenticated publish request with title, body, author token, and publish target.
 
-@Client_UI => [HTTPS/Auth] => @Manager_Backend
+.Schema.Task_API: Client sends task create/list/update/delete requests as JSON over HTTP.
+.Schema.Task_Events: Backend emits task lifecycle events as JSON messages.
 
-@Manager_Backend:
-  .Stack: Node.js/TypeScript
+@Client_UI => [Task_API] => @Task_Backend
+@Task_Backend => [Task_Events] => @Notification_Worker
+
+@Task_Backend:
+  .Stack: Go
   .Runtime.Port.dev: 8080
-  .Expose.HTTPS/Auth: REST_JSON POST /publish
-  $Publish_Flow:
-    [Req_Validate] >> [DB_Save] >> [Push_To_Channel]
-    ! On_Error >> [Log] >> (Fail_Response)
+  .Expose.Task_API: REST_JSON POST /task-api
+  .Use.Task_Events.dev: webhook:/task-events
+  $Task_API_Flow:
+    (Idle) >> [Receive_Task_Request] >> [Validate_Input] >> [Persist_Task] >> [Return_Response] >> (Request_Handled)
+    ! Invalid_Input >> [Return_Validation_Error] >> (Request_Rejected)
 ```
 
-See the complete example at `examples/api_publish.af`.
+See the complete example at `examples/kanban.af`.
 
 ## Generated Outputs
 
 Running `build` writes outputs to `examples/generated/<source-name>` by default:
 
 ```text
-examples/generated/api_publish
+examples/generated/kanban
 ├── ast.json
 ├── contracts.json
 ├── diagnostics.json
@@ -116,40 +121,40 @@ examples/generated/api_publish
     └── contracts.ts
 ```
 
-The generated prompts are intentionally module-scoped. For example, the `Manager_Backend` prompt includes its stack, internal workflow, inbound `HTTPS/Auth` contract, and outbound `Redis_PubSub` contract, but it does not expose unrelated module internals.
+The generated prompts are intentionally module-scoped. For example, the `Task_Backend` prompt includes its stack, internal workflow, inbound `Task_API` contract, and outbound `Task_Events` contract, but it does not expose unrelated module internals.
 
-Runtime assembly metadata is optional and generated from module attributes. For example, `.Runtime.Port.dev`, `.Expose.HTTPS/Auth`, and `.Use.HTTPS/Auth.dev` are compiled into `runtime.json` profiles for local proxy or environment wiring.
+Runtime assembly metadata is optional and generated from module attributes. For example, `.Runtime.Port.dev`, `.Expose.Task_API`, and `.Use.Task_Events.dev` are compiled into `runtime.json` profiles for local proxy or environment wiring.
 
 ## CLI Commands
 
 Validate an `.af` file:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli validate examples/api_publish.af
+PYTHONPATH=compiler python3 -m archflow.cli validate examples/kanban.af
 ```
 
 Print diagnostics as JSON:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli validate examples/api_publish.af --json
+PYTHONPATH=compiler python3 -m archflow.cli validate examples/kanban.af --json
 ```
 
 Build all generated artifacts:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli build examples/api_publish.af --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli build examples/kanban.af --registry registry
 ```
 
 Build to a custom output directory:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli build examples/api_publish.af --registry registry --out /tmp/archflow-build
+PYTHONPATH=compiler python3 -m archflow.cli build examples/kanban.af --registry registry --out /tmp/archflow-build
 ```
 
 Create a module development workspace:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/api_publish.af --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/kanban.af --registry registry
 ```
 
 `scaffold` also saves the current `.af` source as the implemented architecture baseline under `.archflow/snapshots/current` and archives a timestamped snapshot under `.archflow/snapshots/<id>`.
@@ -157,19 +162,19 @@ PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/api_publish.af --r
 Scaffold to a custom output directory:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/api_publish.af --registry registry --out /tmp/api-publish-workspace
+PYTHONPATH=compiler python3 -m archflow.cli scaffold examples/kanban.af --registry registry --out /tmp/kanban-workspace
 ```
 
 Render a single module prompt:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli prompt examples/api_publish.af --module Manager_Backend --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli prompt examples/kanban.af --module Task_Backend --registry registry
 ```
 
 Plan an architecture change after editing the `.af` file:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli plan-change examples/api_publish.af --workspace examples/scaffold/api_publish --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli plan-change examples/kanban.af --workspace examples/scaffold/kanban --registry registry
 ```
 
 This compares the edited `.af` against `.archflow/snapshots/current/source.af`, writes a timestamped change under `.archflow/changes/<id>`, and refreshes `.archflow/changes/latest` as the convenient pointer for module-level patch prompts.
@@ -177,7 +182,7 @@ This compares the edited `.af` against `.archflow/snapshots/current/source.af`, 
 Accept a verified change as the new implemented baseline:
 
 ```bash
-PYTHONPATH=compiler python3 -m archflow.cli accept-change examples/api_publish.af --workspace examples/scaffold/api_publish --registry registry
+PYTHONPATH=compiler python3 -m archflow.cli accept-change examples/kanban.af --workspace examples/scaffold/kanban --registry registry
 ```
 
 ## Scaffolded Workspace
@@ -185,7 +190,7 @@ PYTHONPATH=compiler python3 -m archflow.cli accept-change examples/api_publish.a
 Running `scaffold` writes a developer-facing workspace to `examples/scaffold/<source-name>` by default:
 
 ```text
-examples/scaffold/api_publish
+examples/scaffold/kanban
 ├── README.md
 ├── apps/client-ui
 │   ├── ARCHFLOW_PROMPT.md
@@ -193,9 +198,9 @@ examples/scaffold/api_publish
 │   ├── docs/contracts.md
 │   ├── src/.gitkeep
 │   └── tests/.gitkeep
-├── services/manager-backend
+├── services/task-backend
 │   └── ...
-├── workers/gateway-sync-worker
+├── workers/notification-worker
 │   └── ...
 └── shared
     ├── ast.json
