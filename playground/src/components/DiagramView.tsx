@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { GraphEdge, GraphModel, GraphNode } from "../compiler/types";
 
 type DiagramViewProps = {
@@ -26,18 +32,33 @@ const LAYOUT_STORAGE_KEY = "archflow.playground.diagram.positions";
 
 export function DiagramView({ graph, selectedId, onSelect }: DiagramViewProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [savedPositions, setSavedPositions] = useState<NodePositions>(() => readSavedPositions());
+  const [savedPositions, setSavedPositions] = useState<NodePositions>(() =>
+    readSavedPositions(),
+  );
   const [dragging, setDragging] = useState<DragState>();
-  const positioned = useMemo(() => applySavedPositions(layoutNodes(graph.nodes), savedPositions), [graph.nodes, savedPositions]);
+  const positioned = useMemo(
+    () => applySavedPositions(layoutNodes(graph.nodes), savedPositions),
+    [graph.nodes, savedPositions],
+  );
   const byId = new Map(positioned.map((node) => [node.id, node]));
-  const width = Math.max(720, positioned.length * 240 + 80, ...positioned.map((node) => node.x + NODE_WIDTH + 80));
-  const height = Math.max(440, ...positioned.map((node) => node.y + NODE_HEIGHT + 80));
+  const width = Math.max(
+    720,
+    positioned.length * 240 + 80,
+    ...positioned.map((node) => node.x + NODE_WIDTH + 80),
+  );
+  const height = Math.max(
+    440,
+    ...positioned.map((node) => node.y + NODE_HEIGHT + 80),
+  );
 
   useEffect(() => {
     localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(savedPositions));
   }, [savedPositions]);
 
-  function startDrag(node: PositionedNode, event: ReactPointerEvent<SVGGElement>): void {
+  function startDrag(
+    node: PositionedNode,
+    event: ReactPointerEvent<SVGGElement>,
+  ): void {
     const point = svgPoint(event);
     if (!point) {
       return;
@@ -60,8 +81,16 @@ export function DiagramView({ graph, selectedId, onSelect }: DiagramViewProps) {
     if (!point) {
       return;
     }
-    const nextX = clamp(point.x - dragging.offsetX, 24, width - NODE_WIDTH - 24);
-    const nextY = clamp(point.y - dragging.offsetY, 24, height - NODE_HEIGHT - 24);
+    const nextX = clamp(
+      point.x - dragging.offsetX,
+      24,
+      width - NODE_WIDTH - 24,
+    );
+    const nextY = clamp(
+      point.y - dragging.offsetY,
+      24,
+      height - NODE_HEIGHT - 24,
+    );
     setSavedPositions((current) => ({
       ...current,
       [dragging.id]: { x: nextX, y: nextY },
@@ -80,7 +109,7 @@ export function DiagramView({ graph, selectedId, onSelect }: DiagramViewProps) {
   return (
     <div className="diagram-shell">
       <button className="diagram-reset" onClick={resetLayout}>
-        重置布局
+        Reset Layout
       </button>
       <svg
         aria-label="ArchFlow architecture diagram"
@@ -92,7 +121,14 @@ export function DiagramView({ graph, selectedId, onSelect }: DiagramViewProps) {
         viewBox={`0 0 ${width} ${height}`}
       >
         <defs>
-          <marker id="arrow" markerHeight="10" markerWidth="10" orient="auto" refX="9" refY="3">
+          <marker
+            id="arrow"
+            markerHeight="10"
+            markerWidth="10"
+            orient="auto"
+            refX="9"
+            refY="3"
+          >
             <path d="M0,0 L0,6 L9,3 z" fill="currentColor" />
           </marker>
         </defs>
@@ -120,7 +156,12 @@ export function DiagramView({ graph, selectedId, onSelect }: DiagramViewProps) {
 
         <g className="nodes">
           {positioned.map((node) => (
-            <Node key={node.id} node={node} onDragStart={startDrag} selected={selectedId === node.id} />
+            <Node
+              key={node.id}
+              node={node}
+              onDragStart={startDrag}
+              selected={selectedId === node.id}
+            />
           ))}
         </g>
       </svg>
@@ -135,15 +176,34 @@ function Node({
 }: {
   node: PositionedNode;
   selected: boolean;
-  onDragStart: (node: PositionedNode, event: ReactPointerEvent<SVGGElement>) => void;
+  onDragStart: (
+    node: PositionedNode,
+    event: ReactPointerEvent<SVGGElement>,
+  ) => void;
 }) {
   const icon = stackIconFor(node.stack);
 
   return (
-    <g className={`diagram-node ${selected ? "selected" : ""}`} onPointerDown={(event) => onDragStart(node, event)} role="button" tabIndex={0}>
-      <title>{node.stack ? `${node.label}\nStack: ${node.stack}` : node.label}</title>
-      <rect height={NODE_HEIGHT} rx="16" width={NODE_WIDTH} x={node.x} y={node.y} />
-      <g className={`stack-icon ${icon.className}`} transform={`translate(${node.x + 18} ${node.y + 20})`}>
+    <g
+      className={`diagram-node ${selected ? "selected" : ""}`}
+      onPointerDown={(event) => onDragStart(node, event)}
+      role="button"
+      tabIndex={0}
+    >
+      <title>
+        {node.stack ? `${node.label}\nStack: ${node.stack}` : node.label}
+      </title>
+      <rect
+        height={NODE_HEIGHT}
+        rx="16"
+        width={NODE_WIDTH}
+        x={node.x}
+        y={node.y}
+      />
+      <g
+        className={`stack-icon ${icon.className}`}
+        transform={`translate(${node.x + 18} ${node.y + 20})`}
+      >
         <circle cx="19" cy="19" r="19" />
         {icon.kind === "react" ? <ReactGlyph /> : null}
         {icon.kind === "python" ? <PythonGlyph /> : null}
@@ -217,14 +277,34 @@ function Edge({
   const labelY = midY - verticalDirection * 34;
 
   return (
-    <g className={`diagram-edge ${selected ? "selected" : ""}`} onClick={() => onSelect(edge.id, edge.line)} role="button" tabIndex={0}>
-      <title>{edge.schema ? `[${edge.channel}]\n${edge.schema}` : `[${edge.channel}]`}</title>
+    <g
+      className={`diagram-edge ${selected ? "selected" : ""}`}
+      onClick={() => onSelect(edge.id, edge.line)}
+      role="button"
+      tabIndex={0}
+    >
+      <title>
+        {edge.schema
+          ? `[${edge.channel}]\n${edge.schema}`
+          : `[${edge.channel}]`}
+      </title>
       <path className="edge-track" d={path} markerEnd="url(#arrow)" />
       <path className="edge-flow" d={path} pathLength="100" />
       <circle className="edge-pulse" r="3.5">
-        <animateMotion dur={selected ? "1.4s" : "2.3s"} repeatCount="indefinite" path={path} />
+        <animateMotion
+          dur={selected ? "1.4s" : "2.3s"}
+          repeatCount="indefinite"
+          path={path}
+        />
       </circle>
-      <rect className="edge-label-bg" height="26" rx="13" width={labelWidth} x={labelX - labelWidth / 2} y={labelY - 16} />
+      <rect
+        className="edge-label-bg"
+        height="26"
+        rx="13"
+        width={labelWidth}
+        x={labelX - labelWidth / 2}
+        y={labelY - 16}
+      />
       <text className="edge-label" x={labelX} y={labelY + 2}>
         [{edge.channel}]
       </text>
@@ -240,7 +320,10 @@ function layoutNodes(nodes: GraphNode[]): PositionedNode[] {
   }));
 }
 
-function applySavedPositions(nodes: PositionedNode[], savedPositions: NodePositions): PositionedNode[] {
+function applySavedPositions(
+  nodes: PositionedNode[],
+  savedPositions: NodePositions,
+): PositionedNode[] {
   return nodes.map((node) => ({
     ...node,
     ...(savedPositions[node.id] ?? {}),
@@ -256,8 +339,13 @@ function readSavedPositions(): NodePositions {
   }
 }
 
-function svgPoint(event: ReactPointerEvent<SVGElement>): { x: number; y: number } | undefined {
-  const svg = event.currentTarget instanceof SVGSVGElement ? event.currentTarget : event.currentTarget.ownerSVGElement;
+function svgPoint(
+  event: ReactPointerEvent<SVGElement>,
+): { x: number; y: number } | undefined {
+  const svg =
+    event.currentTarget instanceof SVGSVGElement
+      ? event.currentTarget
+      : event.currentTarget.ownerSVGElement;
   if (!svg) {
     return undefined;
   }
@@ -272,7 +360,11 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function stackIconFor(stack?: string): { kind: "generic" | "go" | "python" | "react"; label: string; className: string } {
+function stackIconFor(stack?: string): {
+  kind: "generic" | "go" | "python" | "react";
+  label: string;
+  className: string;
+} {
   const normalized = stack?.toLowerCase() ?? "";
   if (normalized.includes("react")) {
     return { kind: "react", label: "R", className: "react" };
