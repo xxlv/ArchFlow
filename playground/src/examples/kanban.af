@@ -1,0 +1,43 @@
+# Task board architecture
+.System: TaskBoard
+.Standard: REST_JSON
+
+.Schema.Task_API: Client sends task create/list/update/delete requests as JSON over HTTP.
+.Schema.Task_Events: Backend emits task lifecycle events as JSON messages.
+.Contract.Task_API.Envelope: JSON object with traceId:string and payload:TaskApiPayload.
+.Contract.Task_API.TaskRecord: { id:string, title:string, status:"todo"|"doing"|"done", createdAt:string, updatedAt?:string }.
+.Contract.Task_API.Operations: list -> { channel:"Task_API", operation:"list" }; create -> { channel:"Task_API", operation:"create", title:string, status:"todo"|"doing"|"done" }; update -> { channel:"Task_API", operation:"update", taskId:string, changes:{ title?:string, status?:"todo"|"doing"|"done" } }; delete -> { channel:"Task_API", operation:"delete", taskId:string }.
+.Contract.Task_API.Responses: list returns { tasks:TaskRecord[] }; create/update return { task:TaskRecord }; delete returns { deletedTaskId:string }; errors return { error:string } inside payload.
+.Contract.Task_Events.Envelope: JSON object with traceId:string and payload:TaskEventPayload.
+.Contract.Task_Events.Payload: { channel:"Task_Events", eventType:string, task:TaskRecord }.
+
+@Client_UI => [Task_API] => @Task_Backend
+@Task_Backend => [Task_Events] => @Notification_Worker
+
+@Client_UI:
+  .Stack: React
+  .Runtime.Port.dev: 5173
+  .Use.Task_API.dev: proxy:/task-api
+  $Task_Interaction:
+    (Viewing_Board) >> [Submit_New_Task] >> [Render_Task_List] >> (Board_Updated)
+    (Viewing_Board) >> [Request_Task_Delete] >> [Render_Task_List] >> (Board_Updated)
+    ! Request_Failed >> [Show_Error_Message] >> (Viewing_Board)
+
+@Task_Backend:
+  .Stack: Go
+  .Runtime.Port.dev: 8080
+  .Expose.Task_API: REST_JSON POST /task-api
+  .Use.Task_Events.dev: webhook:/task-events
+  $Task_API_Flow:
+    (Idle) >> [Receive_Task_Request] >> [Validate_Input] >> [Persist_Task] >> [Return_Response] >> (Request_Handled)
+    (Idle) >> [Receive_Delete_Request] >> [Validate_Task_Id] >> [Delete_Task] >> [Return_Delete_Response] >> (Request_Handled)
+    ! Invalid_Input >> [Return_Validation_Error] >> (Request_Rejected)
+    ! Storage_Error >> [Return_Server_Error] >> (Request_Failed)
+
+@Notification_Worker:
+  .Stack: Python
+  .Runtime.Port.dev: 8090
+  .Expose.Task_Events: EVENT_JSON POST /task-events
+  $Notify_On_Task_Event:
+    (Waiting) >> [Receive_Task_Event] >> [Build_Notification] >> [Send_Notification] >> (Notification_Sent)
+    ! Delivery_Failed >> [Record_Retry] >> (Retry_Pending)

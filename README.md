@@ -45,6 +45,7 @@ Deferred:
 .
 ├── compiler/archflow      Python compiler package
 ├── examples               Example .af files and generated snapshots
+├── playground             Static web playground for editing and visualizing .af files
 ├── registry               Base and stack-specific prompt templates
 ├── spec                   MVP grammar notes
 ├── tests                  Unit tests
@@ -75,6 +76,14 @@ archflow validate examples/kanban.af
 archflow build examples/kanban.af --registry registry
 archflow scaffold examples/kanban.af --registry registry
 archflow prompt examples/kanban.af --module Task_Backend --registry registry
+```
+
+Run the static playground:
+
+```bash
+cd playground
+npm install
+npm run dev
 ```
 
 ## Example Input

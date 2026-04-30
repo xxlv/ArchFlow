@@ -1,0 +1,470 @@
+:root {
+  color: #d6deeb;
+  background: #07111f;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 980px;
+  background:
+    radial-gradient(circle at top left, rgba(69, 123, 255, 0.22), transparent 34rem),
+    linear-gradient(135deg, #08111f 0%, #0e1728 48%, #07111f 100%);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.topbar h1 {
+  margin: 4px 0 0;
+  color: #f8fafc;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.status-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pill,
+.reset-button {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.pill.ok {
+  color: #bbf7d0;
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.pill.warning {
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.34);
+}
+
+.pill.error {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.42);
+}
+
+.reset-button {
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  color: #fff;
+  border-color: rgba(125, 211, 252, 0.52);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(420px, 46%) minmax(540px, 54%);
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  gap: 16px;
+}
+
+.editor-pane,
+.preview-pane {
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+.editor-pane {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.preview-pane {
+  display: grid;
+  grid-template-rows: auto minmax(320px, 1fr) minmax(210px, 34%);
+  min-height: 0;
+}
+
+.pane-title {
+  padding: 12px 16px;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(2, 6, 23, 0.34);
+}
+
+.pane-title.compact {
+  padding: 10px 12px;
+}
+
+.diagram-shell {
+  position: relative;
+  min-width: 0;
+  overflow: auto;
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    rgba(2, 6, 23, 0.14);
+  background-size: 24px 24px;
+}
+
+.diagram-reset {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  padding: 7px 10px;
+  color: #cbd5e1;
+  cursor: pointer;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.diagram-reset:hover {
+  color: #fff;
+  border-color: rgba(125, 211, 252, 0.48);
+}
+
+.diagram {
+  display: block;
+  min-width: 100%;
+  height: 100%;
+  color: #7dd3fc;
+}
+
+.diagram-node,
+.diagram-edge {
+  cursor: pointer;
+}
+
+.diagram-node {
+  cursor: grab;
+}
+
+.diagram-node:active,
+.diagram.dragging .diagram-node {
+  cursor: grabbing;
+}
+
+.diagram-node rect {
+  fill: #0f172a;
+  stroke: rgba(125, 211, 252, 0.36);
+  stroke-width: 1.4;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+}
+
+.diagram-node.selected rect {
+  fill: #172554;
+  stroke: #38bdf8;
+  stroke-width: 2.4;
+}
+
+.node-label,
+.node-meta,
+.edge-label {
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.node-label {
+  fill: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
+  text-anchor: start;
+}
+
+.node-meta {
+  fill: #94a3b8;
+  font-size: 12px;
+  text-anchor: start;
+}
+
+.stack-icon {
+  pointer-events: none;
+}
+
+.stack-icon circle:first-child {
+  stroke-width: 1.3;
+}
+
+.stack-icon.react circle:first-child {
+  fill: rgba(14, 165, 233, 0.14);
+  stroke: rgba(56, 189, 248, 0.62);
+}
+
+.stack-icon.go circle:first-child {
+  fill: rgba(6, 182, 212, 0.14);
+  stroke: rgba(103, 232, 249, 0.62);
+}
+
+.stack-icon.python circle:first-child {
+  fill: rgba(245, 158, 11, 0.14);
+  stroke: rgba(251, 191, 36, 0.62);
+}
+
+.stack-icon.typescript circle:first-child,
+.stack-icon.node circle:first-child,
+.stack-icon.generic circle:first-child {
+  fill: rgba(99, 102, 241, 0.14);
+  stroke: rgba(165, 180, 252, 0.62);
+}
+
+.stack-icon-label {
+  fill: #f8fafc;
+  font-size: 11px;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: -0.04em;
+}
+
+.react-glyph ellipse {
+  fill: none;
+  stroke: #67e8f9;
+  stroke-width: 1.6;
+}
+
+.react-glyph circle {
+  fill: #67e8f9;
+}
+
+.python-glyph path:first-child {
+  fill: #60a5fa;
+}
+
+.python-glyph path:nth-child(2) {
+  fill: #fbbf24;
+}
+
+.python-glyph circle {
+  fill: #0f172a;
+}
+
+.diagram-edge .edge-track {
+  fill: none;
+  stroke: rgba(125, 211, 252, 0.34);
+  stroke-width: 2.2;
+}
+
+.diagram-edge .edge-flow {
+  fill: none;
+  stroke: rgba(56, 189, 248, 0.86);
+  stroke-dasharray: 12 88;
+  stroke-linecap: round;
+  stroke-width: 3;
+  animation: edge-flow 2.4s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.32));
+  marker-end: none;
+}
+
+.diagram-edge .edge-pulse {
+  fill: #7dd3fc;
+  filter: drop-shadow(0 0 8px rgba(125, 211, 252, 0.74));
+  opacity: 0.86;
+}
+
+.diagram-edge.selected .edge-track {
+  stroke: rgba(251, 191, 36, 0.48);
+  stroke-width: 2.8;
+}
+
+.diagram-edge.selected .edge-flow {
+  stroke: rgba(251, 191, 36, 0.88);
+  animation-duration: 1.45s;
+  filter: drop-shadow(0 0 9px rgba(251, 191, 36, 0.38));
+}
+
+.diagram-edge.selected .edge-pulse {
+  fill: #fde68a;
+  filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.72));
+}
+
+.edge-label-bg {
+  fill: rgba(6, 13, 27, 0.94);
+  stroke: rgba(125, 211, 252, 0.24);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.22));
+}
+
+.diagram-edge.selected .edge-label-bg {
+  fill: rgba(30, 25, 13, 0.94);
+  stroke: rgba(251, 191, 36, 0.62);
+}
+
+.edge-label {
+  fill: #e0f2fe;
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.diagram-edge.selected .edge-label {
+  fill: #fef3c7;
+}
+
+@keyframes edge-flow {
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 38%);
+  min-height: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.details-grid > section {
+  min-height: 0;
+  overflow: auto;
+}
+
+.details-grid > section + section {
+  border-left: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.diagnostics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.diagnostic-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+  padding: 10px;
+  color: #cbd5e1;
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.diagnostic-item:hover {
+  border-color: rgba(125, 211, 252, 0.38);
+}
+
+.diagnostic-item.error .diagnostic-severity {
+  color: #fecaca;
+}
+
+.diagnostic-item.warning .diagnostic-severity {
+  color: #fde68a;
+}
+
+.diagnostic-severity {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.diagnostic-message {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.diagnostic-line {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.empty-state,
+.inspector-card {
+  margin: 12px;
+  padding: 14px;
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.inspector-card h3 {
+  margin: 6px 0 14px;
+  color: #f8fafc;
+  font-size: 18px;
+}
+
+.inspector-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.inspector-card dl {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.inspector-card dt {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.inspector-card dd {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.source-line-selected {
+  background: rgba(14, 165, 233, 0.18);
+}
+
+.source-line-glyph {
+  background: #38bdf8;
+  border-radius: 999px;
+  margin-left: 5px;
+  width: 8px !important;
+}
