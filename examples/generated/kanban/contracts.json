@@ -1,0 +1,84 @@
+{
+  "Client_UI__Task_API__Task_Backend": {
+    "details": {
+      "Envelope": "JSON object with traceId:string and payload:TaskApiPayload.",
+      "Operations": "list -> { channel:\"Task_API\", operation:\"list\" }; create -> { channel:\"Task_API\", operation:\"create\", title:string, status:\"todo\"|\"doing\"|\"done\" }; update -> { channel:\"Task_API\", operation:\"update\", taskId:string, changes:{ title?:string, status?:\"todo\"|\"doing\"|\"done\" } }.",
+      "Responses": "list returns { tasks:TaskRecord[] }; create/update return { task:TaskRecord }; errors return { error:string } inside payload.",
+      "TaskRecord": "{ id:string, title:string, status:\"todo\"|\"doing\"|\"done\", createdAt:string, updatedAt?:string }."
+    },
+    "mock": {
+      "payload": {
+        "channel": "Task_API",
+        "description": "Client sends task create/list/update requests as JSON over HTTP.",
+        "from": "Client_UI",
+        "to": "Task_Backend"
+      },
+      "traceId": "mock-client_ui__task_api__task_backend"
+    },
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": true,
+      "description": "Client sends task create/list/update requests as JSON over HTTP.",
+      "properties": {
+        "payload": {
+          "additionalProperties": true,
+          "description": "Client sends task create/list/update requests as JSON over HTTP.",
+          "type": "object"
+        },
+        "traceId": {
+          "description": "Correlation id for this isolated channel message.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "traceId",
+        "payload"
+      ],
+      "title": "Client_UI__Task_API__Task_Backend",
+      "type": "object"
+    },
+    "source": "Client_UI",
+    "target": "Task_Backend",
+    "via": "Task_API"
+  },
+  "Task_Backend__Task_Events__Notification_Worker": {
+    "details": {
+      "Envelope": "JSON object with traceId:string and payload:TaskEventPayload.",
+      "Payload": "{ channel:\"Task_Events\", eventType:string, task:TaskRecord }."
+    },
+    "mock": {
+      "payload": {
+        "channel": "Task_Events",
+        "description": "Backend emits task lifecycle events as JSON messages.",
+        "from": "Task_Backend",
+        "to": "Notification_Worker"
+      },
+      "traceId": "mock-task_backend__task_events__notification_worker"
+    },
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": true,
+      "description": "Backend emits task lifecycle events as JSON messages.",
+      "properties": {
+        "payload": {
+          "additionalProperties": true,
+          "description": "Backend emits task lifecycle events as JSON messages.",
+          "type": "object"
+        },
+        "traceId": {
+          "description": "Correlation id for this isolated channel message.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "traceId",
+        "payload"
+      ],
+      "title": "Task_Backend__Task_Events__Notification_Worker",
+      "type": "object"
+    },
+    "source": "Task_Backend",
+    "target": "Notification_Worker",
+    "via": "Task_Events"
+  }
+}

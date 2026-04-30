@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "Client sends task create/list/update requests as JSON over HTTP.",
+  "properties": {
+    "payload": {
+      "additionalProperties": true,
+      "description": "Client sends task create/list/update requests as JSON over HTTP.",
+      "type": "object"
+    },
+    "traceId": {
+      "description": "Correlation id for this isolated channel message.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "traceId",
+    "payload"
+  ],
+  "title": "Client_UI__Task_API__Task_Backend",
+  "type": "object"
+}

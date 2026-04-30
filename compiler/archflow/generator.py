@@ -1,0 +1,225 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from .contracts import (
+    contract_id,
+    contracts_manifest,
+    dumps_json,
+    generate_typescript_assembly,
+    generate_typescript_contracts,
+    graph_mermaid,
+    json_schema_for_channel,
+    mock_payload_for_channel,
+)
+from .contract_details import contract_details_for_channel
+from .model import ArchFlowAst, Component, Diagnostic
+from .prompts import compile_all_prompts
+from .runtime import runtime_manifest
+
+
+def build_outputs(ast: ArchFlowAst, output_dir: str | Path, registry_dir: str | Path | None = None) -> None:
+    out = Path(output_dir)
+    prompts_dir = out / "prompts"
+    contracts_dir = out / "contracts"
+    mocks_dir = out / "mocks"
+    stubs_dir = out / "stubs" / "typescript"
+
+    for path in [out, prompts_dir, contracts_dir, mocks_dir, stubs_dir]:
+        path.mkdir(parents=True, exist_ok=True)
+
+    (out / "ast.json").write_text(dumps_json(ast.to_dict()), encoding="utf-8")
+    (out / "diagnostics.json").write_text(dumps_json(_diagnostics_payload(ast.diagnostics)), encoding="utf-8")
+    (out / "graph.mmd").write_text(graph_mermaid(ast), encoding="utf-8")
+    (out / "contracts.json").write_text(dumps_json(contracts_manifest(ast)), encoding="utf-8")
+    (out / "runtime.json").write_text(dumps_json(runtime_manifest(ast)), encoding="utf-8")
+
+    for name, prompt in compile_all_prompts(ast, registry_dir).items():
+        (prompts_dir / f"{name}.md").write_text(prompt, encoding="utf-8")
+
+    for channel in ast.channels:
+        name = contract_id(channel)
+        (contracts_dir / f"{name}.schema.json").write_text(dumps_json(json_schema_for_channel(channel)), encoding="utf-8")
+        (mocks_dir / f"{name}.mock.json").write_text(dumps_json(mock_payload_for_channel(channel)), encoding="utf-8")
+
+    (stubs_dir / "contracts.ts").write_text(generate_typescript_contracts(ast), encoding="utf-8")
+    (stubs_dir / "assembly.ts").write_text(generate_typescript_assembly(ast), encoding="utf-8")
+
+
+def scaffold_outputs(ast: ArchFlowAst, output_dir: str | Path, registry_dir: str | Path | None = None) -> None:
+    out = Path(output_dir)
+    shared_dir = out / "shared"
+    prompts_dir = shared_dir / "prompts"
+    contracts_dir = shared_dir / "contracts"
+    mocks_dir = shared_dir / "mocks"
+    stubs_dir = shared_dir / "stubs" / "typescript"
+
+    for path in [out, shared_dir, prompts_dir, contracts_dir, mocks_dir, stubs_dir]:
+        path.mkdir(parents=True, exist_ok=True)
+
+    (out / "README.md").write_text(_scaffold_readme(ast), encoding="utf-8")
+    (shared_dir / "ast.json").write_text(dumps_json(ast.to_dict()), encoding="utf-8")
+    (shared_dir / "contracts.json").write_text(dumps_json(contracts_manifest(ast)), encoding="utf-8")
+    (shared_dir / "runtime.json").write_text(dumps_json(runtime_manifest(ast)), encoding="utf-8")
+    (shared_dir / "graph.mmd").write_text(graph_mermaid(ast), encoding="utf-8")
+    (stubs_dir / "contracts.ts").write_text(generate_typescript_contracts(ast), encoding="utf-8")
+    (stubs_dir / "assembly.ts").write_text(generate_typescript_assembly(ast), encoding="utf-8")
+
+    prompts = compile_all_prompts(ast, registry_dir)
+    for name, prompt in prompts.items():
+        (prompts_dir / f"{name}.md").write_text(prompt, encoding="utf-8")
+
+    for channel in ast.channels:
+        name = contract_id(channel)
+        (contracts_dir / f"{name}.schema.json").write_text(dumps_json(json_schema_for_channel(channel)), encoding="utf-8")
+        (mocks_dir / f"{name}.mock.json").write_text(dumps_json(mock_payload_for_channel(channel)), encoding="utf-8")
+
+    for name, component in sorted(ast.components.items()):
+        if not component.explicit:
+            continue
+        module_dir = out / _component_base_dir(component) / _slugify(name)
+        src_dir = module_dir / "src"
+        tests_dir = module_dir / "tests"
+        docs_dir = module_dir / "docs"
+        for path in [src_dir, tests_dir, docs_dir]:
+            path.mkdir(parents=True, exist_ok=True)
+
+        (module_dir / "ARCHFLOW_PROMPT.md").write_text(prompts[name], encoding="utf-8")
+        (module_dir / "README.md").write_text(_module_readme(ast, component), encoding="utf-8")
+        (src_dir / ".gitkeep").write_text("", encoding="utf-8")
+        (tests_dir / ".gitkeep").write_text("", encoding="utf-8")
+        (docs_dir / "contracts.md").write_text(_module_contracts_doc(ast, component), encoding="utf-8")
+
+
+def _diagnostics_payload(diagnostics: list[Diagnostic]) -> dict:
+    return {
+        "errors": [diagnostic.to_dict() for diagnostic in diagnostics if diagnostic.severity == "error"],
+        "warnings": [diagnostic.to_dict() for diagnostic in diagnostics if diagnostic.severity == "warning"],
+    }
+
+
+def _scaffold_readme(ast: ArchFlowAst) -> str:
+    lines = [
+        f"# {ast.attributes.get('System', 'ArchFlow')} Scaffold",
+        "",
+        "This workspace was generated by ArchFlow scaffold.",
+        "",
+        "## How To Develop",
+        "",
+        "1. Open each module directory.",
+        "2. Use `ARCHFLOW_PROMPT.md` as the implementation prompt for that module.",
+        "3. Keep module communication limited to files under `shared/contracts`.",
+        "4. Use `shared/mocks` to test modules before downstream services exist.",
+        "",
+        "## Modules",
+        "",
+    ]
+    for name, component in sorted(ast.components.items()):
+        if component.explicit:
+            lines.append(f"- `@{name}`: `{component.attributes.get('Stack', 'Unspecified')}`")
+    lines.extend(
+        [
+            "",
+            "## Shared Artifacts",
+            "",
+            "- `shared/contracts`: JSON Schema contracts for every `=>` channel.",
+            "- `shared/mocks`: mock payloads for parallel development.",
+            "- `shared/runtime.json`: runtime assembly metadata for profiles, ports, endpoints, and bindings.",
+            "- `shared/prompts`: centralized copies of each module prompt.",
+            "- `shared/stubs/typescript`: TypeScript contract and assembly sketches.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _module_readme(ast: ArchFlowAst, component: Component) -> str:
+    inbound = [channel for channel in ast.channels if channel.target == component.name]
+    outbound = [channel for channel in ast.channels if channel.source == component.name]
+    lines = [
+        f"# @{component.name}",
+        "",
+        f"Stack: `{component.attributes.get('Stack', 'Unspecified')}`",
+        "",
+        "Use `ARCHFLOW_PROMPT.md` to generate or implement this module. Keep implementation files under `src/` and module tests under `tests/`.",
+        "",
+        "## Boundary",
+        "",
+        "Inbound:",
+        *(_format_module_channel_line(channel, "from") for channel in inbound),
+        "",
+        "Outbound:",
+        *(_format_module_channel_line(channel, "to") for channel in outbound),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def _module_contracts_doc(ast: ArchFlowAst, component: Component) -> str:
+    channels = [channel for channel in ast.channels if channel.source == component.name or channel.target == component.name]
+    lines = [
+        f"# @{component.name} Contracts",
+        "",
+        "Use these channel contracts as the only cross-module boundary.",
+        "",
+    ]
+    if not channels:
+        lines.append("No channel contracts.")
+    for channel in channels:
+        direction = "outbound" if channel.source == component.name else "inbound"
+        runtime_lines = _runtime_channel_lines(component, channel)
+        detail_lines = _contract_detail_lines(ast, channel)
+        lines.extend(
+            [
+                f"## {direction}: [{channel.via}]",
+                "",
+                f"- Source: `@{channel.source}`",
+                f"- Target: `@{channel.target}`",
+                f"- Schema file: `../../../shared/contracts/{contract_id(channel)}.schema.json`",
+                f"- Mock file: `../../../shared/mocks/{contract_id(channel)}.mock.json`",
+                f"- Description: {channel.schema or 'TODO: define channel schema'}",
+                *detail_lines,
+                *runtime_lines,
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _format_module_channel_line(channel, peer_label: str) -> str:
+    peer = channel.source if peer_label == "from" else channel.target
+    return f"- [{channel.via}] {peer_label} `@{peer}`"
+
+
+def _runtime_channel_lines(component: Component, channel) -> list[str]:
+    lines: list[str] = []
+    if channel.target == component.name:
+        exposure = component.attributes.get(f"Expose.{channel.via}")
+        if exposure:
+            lines.append(f"- Runtime endpoint: `{exposure}`")
+    if channel.source == component.name:
+        prefix = f"Use.{channel.via}."
+        for key, value in sorted(component.attributes.items()):
+            if key.startswith(prefix):
+                profile = key.removeprefix(prefix)
+                lines.append(f"- Runtime binding ({profile}): `{value}`")
+    return lines
+
+
+def _contract_detail_lines(ast: ArchFlowAst, channel) -> list[str]:
+    return [f"- {key}: {value}" for key, value in contract_details_for_channel(ast, channel).items()]
+
+
+def _component_base_dir(component: Component) -> str:
+    stack = component.attributes.get("Stack", "").lower()
+    if "react" in stack:
+        return "apps"
+    if "worker" in component.name.lower() or stack == "go" or "go/" in stack or "/go" in stack:
+        return "workers"
+    if "node" in stack or "service" in component.name.lower() or "backend" in component.name.lower():
+        return "services"
+    return "modules"
+
+
+def _slugify(value: str) -> str:
+    words = re.sub(r"([a-z0-9])([A-Z])", r"\1-\2", value).replace("_", "-")
+    return re.sub(r"[^a-zA-Z0-9-]+", "-", words).strip("-").lower()

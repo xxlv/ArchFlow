@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "Backend emits task lifecycle events as JSON messages.",
+  "properties": {
+    "payload": {
+      "additionalProperties": true,
+      "description": "Backend emits task lifecycle events as JSON messages.",
+      "type": "object"
+    },
+    "traceId": {
+      "description": "Correlation id for this isolated channel message.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "traceId",
+    "payload"
+  ],
+  "title": "Task_Backend__Task_Events__Notification_Worker",
+  "type": "object"
+}

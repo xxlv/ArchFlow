@@ -1,0 +1,3 @@
+flowchart TD
+  Client_UI["@Client_UI"] -->|"Task_API"| Task_Backend["@Task_Backend"]
+  Task_Backend["@Task_Backend"] -->|"Task_Events"| Notification_Worker["@Notification_Worker"]

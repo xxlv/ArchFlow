@@ -1,0 +1,9 @@
+{
+  "payload": {
+    "channel": "Task_Events",
+    "description": "Backend emits task lifecycle events as JSON messages.",
+    "from": "Task_Backend",
+    "to": "Notification_Worker"
+  },
+  "traceId": "mock-task_backend__task_events__notification_worker"
+}

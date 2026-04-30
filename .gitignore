@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+*.egg-info/
+build/
+dist/
+
+node_modules/
+.vite/
+*.tsbuildinfo
+.DS_Store

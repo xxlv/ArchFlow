@@ -1,0 +1,213 @@
+{
+  "channels": [
+    {
+      "line": 14,
+      "schema": "Client sends task create/list/update requests as JSON over HTTP.",
+      "source": "Client_UI",
+      "target": "Task_Backend",
+      "via": "Task_API"
+    },
+    {
+      "line": 15,
+      "schema": "Backend emits task lifecycle events as JSON messages.",
+      "source": "Task_Backend",
+      "target": "Notification_Worker",
+      "via": "Task_Events"
+    }
+  ],
+  "components": [
+    {
+      "attributes": {
+        "Runtime.Port.dev": "5173",
+        "Stack": "React",
+        "Use.Task_API.dev": "proxy:/task-api"
+      },
+      "explicit": true,
+      "line": 17,
+      "name": "Client_UI",
+      "workflows": [
+        {
+          "exceptions": [
+            {
+              "line": 23,
+              "name": "Request_Failed",
+              "sequence": [
+                {
+                  "kind": "action",
+                  "value": "Show_Error_Message"
+                },
+                {
+                  "kind": "state",
+                  "value": "Viewing_Board"
+                }
+              ]
+            }
+          ],
+          "line": 21,
+          "name": "Task_Interaction",
+          "sequence": [
+            {
+              "kind": "state",
+              "value": "Viewing_Board"
+            },
+            {
+              "kind": "action",
+              "value": "Submit_New_Task"
+            },
+            {
+              "kind": "action",
+              "value": "Render_Task_List"
+            },
+            {
+              "kind": "state",
+              "value": "Board_Updated"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "Expose.Task_Events": "EVENT_JSON POST /task-events",
+        "Runtime.Port.dev": "8090",
+        "Stack": "Python"
+      },
+      "explicit": true,
+      "line": 35,
+      "name": "Notification_Worker",
+      "workflows": [
+        {
+          "exceptions": [
+            {
+              "line": 41,
+              "name": "Delivery_Failed",
+              "sequence": [
+                {
+                  "kind": "action",
+                  "value": "Record_Retry"
+                },
+                {
+                  "kind": "state",
+                  "value": "Retry_Pending"
+                }
+              ]
+            }
+          ],
+          "line": 39,
+          "name": "Notify_On_Task_Event",
+          "sequence": [
+            {
+              "kind": "state",
+              "value": "Waiting"
+            },
+            {
+              "kind": "action",
+              "value": "Receive_Task_Event"
+            },
+            {
+              "kind": "action",
+              "value": "Build_Notification"
+            },
+            {
+              "kind": "action",
+              "value": "Send_Notification"
+            },
+            {
+              "kind": "state",
+              "value": "Notification_Sent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "Expose.Task_API": "REST_JSON POST /task-api",
+        "Runtime.Port.dev": "8080",
+        "Stack": "Go",
+        "Use.Task_Events.dev": "webhook:/task-events"
+      },
+      "explicit": true,
+      "line": 25,
+      "name": "Task_Backend",
+      "workflows": [
+        {
+          "exceptions": [
+            {
+              "line": 32,
+              "name": "Invalid_Input",
+              "sequence": [
+                {
+                  "kind": "action",
+                  "value": "Return_Validation_Error"
+                },
+                {
+                  "kind": "state",
+                  "value": "Request_Rejected"
+                }
+              ]
+            },
+            {
+              "line": 33,
+              "name": "Storage_Error",
+              "sequence": [
+                {
+                  "kind": "action",
+                  "value": "Return_Server_Error"
+                },
+                {
+                  "kind": "state",
+                  "value": "Request_Failed"
+                }
+              ]
+            }
+          ],
+          "line": 30,
+          "name": "Task_API_Flow",
+          "sequence": [
+            {
+              "kind": "state",
+              "value": "Idle"
+            },
+            {
+              "kind": "action",
+              "value": "Receive_Task_Request"
+            },
+            {
+              "kind": "action",
+              "value": "Validate_Input"
+            },
+            {
+              "kind": "action",
+              "value": "Persist_Task"
+            },
+            {
+              "kind": "action",
+              "value": "Return_Response"
+            },
+            {
+              "kind": "state",
+              "value": "Request_Handled"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": [],
+  "system": {
+    "attributes": {
+      "Contract.Task_API.Envelope": "JSON object with traceId:string and payload:TaskApiPayload.",
+      "Contract.Task_API.Operations": "list -> { channel:\"Task_API\", operation:\"list\" }; create -> { channel:\"Task_API\", operation:\"create\", title:string, status:\"todo\"|\"doing\"|\"done\" }; update -> { channel:\"Task_API\", operation:\"update\", taskId:string, changes:{ title?:string, status?:\"todo\"|\"doing\"|\"done\" } }.",
+      "Contract.Task_API.Responses": "list returns { tasks:TaskRecord[] }; create/update return { task:TaskRecord }; errors return { error:string } inside payload.",
+      "Contract.Task_API.TaskRecord": "{ id:string, title:string, status:\"todo\"|\"doing\"|\"done\", createdAt:string, updatedAt?:string }.",
+      "Contract.Task_Events.Envelope": "JSON object with traceId:string and payload:TaskEventPayload.",
+      "Contract.Task_Events.Payload": "{ channel:\"Task_Events\", eventType:string, task:TaskRecord }.",
+      "Schema.Task_API": "Client sends task create/list/update requests as JSON over HTTP.",
+      "Schema.Task_Events": "Backend emits task lifecycle events as JSON messages.",
+      "Standard": "REST_JSON",
+      "System": "TaskBoard"
+    }
+  },
+  "version": "0.1"
+}

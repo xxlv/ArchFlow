@@ -1,0 +1,9 @@
+{
+  "payload": {
+    "channel": "Task_API",
+    "description": "Client sends task create/list/update/delete requests as JSON over HTTP.",
+    "from": "Client_UI",
+    "to": "Task_Backend"
+  },
+  "traceId": "mock-client_ui__task_api__task_backend"
+}

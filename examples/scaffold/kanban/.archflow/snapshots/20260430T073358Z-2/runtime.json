@@ -1,0 +1,53 @@
+{
+  "profiles": {
+    "dev": {
+      "channels": {
+        "Task_API": {
+          "binding": {
+            "component": "Client_UI",
+            "mode": "proxy",
+            "path": "/task-api",
+            "target": "http://localhost:8080",
+            "value": "/task-api"
+          },
+          "endpoint": {
+            "component": "Task_Backend",
+            "method": "POST",
+            "path": "/task-api",
+            "transport": "REST_JSON"
+          },
+          "source": "Client_UI",
+          "target": "Task_Backend",
+          "via": "Task_API"
+        },
+        "Task_Events": {
+          "binding": {
+            "component": "Task_Backend",
+            "mode": "webhook",
+            "value": "/task-events"
+          },
+          "endpoint": {
+            "component": "Notification_Worker",
+            "method": "POST",
+            "path": "/task-events",
+            "transport": "EVENT_JSON"
+          },
+          "source": "Task_Backend",
+          "target": "Notification_Worker",
+          "via": "Task_Events"
+        }
+      },
+      "modules": {
+        "Client_UI": {
+          "port": 5173
+        },
+        "Notification_Worker": {
+          "port": 8090
+        },
+        "Task_Backend": {
+          "port": 8080
+        }
+      }
+    }
+  }
+}
